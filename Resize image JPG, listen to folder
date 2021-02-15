@@ -1,0 +1,59 @@
+from PIL import Image
+import os, sys
+import shutil
+import time
+import numpy as np
+
+
+superResolutionDirectory = "%%INSERT FOLDER TO MOVE HIGH RESOLUTION IMAGES TO%%"
+
+listenerFolderPath = "%% INSERT FOLDER PATH TO LISTEN TO/IMAGES STORED IN%%"
+
+
+%% Set maximum file size in kb, images will be resized progressively until under maximum filesize. 
+maximumFileSize = 4000000
+
+
+def runConversionMax(path):
+    global qualityVal
+    for file in os.listdir(path):
+        if file.endswith(".png"):
+            print(os.path.join(path, file))
+            fileName = os.path.join(path, file)
+            if (os.stat(fileName).st_size > maximumFileSize):
+                print("Running conversion, found " + fileName)
+                im = Image.open(fileName)
+                rgb_im = im.convert('RGB')
+                rgb_im.save(fileName + '.jpg', quality=qualityVal)
+                time.sleep(1)
+                while (os.stat(fileName + '.jpg').st_size > maximumFileSize):
+                    %%Progressively reduce quality to lower filesize below maximum
+                    qualityVal = qualityVal - 1
+                    print(qualityVal)
+                    print(os.path.join(path, file))
+                    fileName = os.path.join(path, file)
+                    im = Image.open(fileName)
+                    rgb_im = im.convert('RGB')
+                    rgb_im.save(fileName + '.jpg', quality=qualityVal)
+                    print("qualityVal " + str(qualityVal))
+                    time.sleep(.1)
+                
+                %%Move converted high resolutions to a backup/archive folder. 
+                dest = shutil.move(fileName,
+                                   superResolutionDirectory)
+
+
+def runConversionListener():
+    for i in range(1, 10000):
+        %%Initialise jpeg conversion quality standard at 100
+        qualityVal = 100
+        try:
+            runConversionMax(listenerFolderPath)
+            %%Sleep 60seconds inbetween polling to check for newly added files to be converted
+            time.sleep(60)
+        except:
+            print("Failed")
+            time.sleep(60)
+
+
+runConversionListener()
