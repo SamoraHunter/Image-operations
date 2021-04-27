@@ -15,10 +15,14 @@
   This is likely only to be of concern on very slow machines or with large numbers of files / high demand. 
   
 # Image similarity check, opencv, numpy, multiprocessing
-set the path to the archive will all the images to be compared, each image will be compared to each other image in the archive.
-images must be the same dimension
-set the threshold for comparison below, the closer to zero the more similar images must be to warrant archiving
+Set the path to the archive will all the images to be compared, each image will be compared to each other image in the archive.
+
+Images must be the same dimension
+
+Set the threshold for comparison below, the closer to zero the more similar images must be to warrant archiving
+
 Intended usage: run the script with a folder of images set, the script will leave only non similar images in the archive
+
 Set the number of logical cores you have. I have a 12 core with 24 logical so I set 24.
 
 Example: You have a large number of images, some are almost duplicates for example taken only a frame apart. An image hash comparison would fail to sort them here. 
