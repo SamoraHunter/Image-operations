@@ -1,0 +1,106 @@
+import os
+import shutil
+from os import walk
+import cv2
+import numpy as np
+from skimage.measure import compare_ssim
+
+#Unused alternative slower image comparison
+def getSSIM(file1, file2):
+    imageA = cv2.imread(file1);
+
+    imageB = cv2.imread(file2);
+
+    grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY);
+    grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY);
+
+    (score, diff) = compare_ssim(grayA, grayB, full=True);
+    diff = (diff * 255).astype("uint8");
+    # print("SSIM: {}".format(score))
+    return score
+
+
+def mse(file1, file2):
+    imageA = cv2.imread(file1);
+
+    imageB = cv2.imread(file2);
+
+    # the 'Mean Squared Error' between the two images is the
+    # sm of the squared difference between the two images;
+    # NOTE: the two images must have the same dimension
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+
+    # return the MSE, the lower the error, the more "similar"
+    # the two images are
+    print(err)
+    return err
+
+#set the path to the archive will all the images to be compared, each image will be compared to each other image in the archive.
+#images must be the same dimension
+#set the threshold for comparison below, the closer to zero the more similar images must be to warrant archiving
+#Intended usage: run the script with a folder of images set, the script will leave only non similar images in the archive
+#Set the number of logical cores you have. I have a 12 core with 24 logical so I set 24.
+
+archive = "C:\\Users\\...[directory holding all images to be checked]"
+
+threshold = 10000
+fileList = []
+for (dirpath, dirnames, filenames) in walk(archive):
+    fileList.extend(filenames)
+    break
+
+print(len(fileList))
+
+try:
+    os.stat(archive + '\\' + 'archived')
+except:
+    os.mkdir(archive + '\\' + 'archived')
+
+
+
+from multiprocessing import Pool
+
+
+def checkmse(file1):
+    global fileList
+    # global threshold
+    global archive
+
+    threshold = 10000
+
+
+    fileList = []
+    for (dirpath, dirnames, filenames) in walk(archive):
+        fileList.extend(filenames)
+    #If the images being compared are similar to another in the archive they will be moved to a folder named archived in that same directory.
+    try:
+
+        for i in range(0, len(fileList)):
+            print("Checking " + archive + '\\' + file1 + " is similar to " + archive + '\\' + fileList[i])
+            if (mse(archive + '\\' + file1,
+                    archive + '\\' + fileList[i]) < threshold and archive + '\\' + file1 != archive + '\\' + fileList[
+                i]):
+                shutil.move(archive + '\\' + file1, archive + '\\' + 'archived\\' + file1)
+    except Exception as e:
+        print(e)
+
+
+if __name__ == '__main__':
+
+    #We reread the file directory as files may be moved
+    fileList = []
+    for (dirpath, dirnames, filenames) in walk(archive):
+        fileList.extend(filenames)
+        break
+
+
+    #Set number of logical processes to use :24
+    with Pool(24) as p:
+        fileList = []
+        for (dirpath, dirnames, filenames) in walk(archive):
+            fileList.extend(filenames)
+        print(p.map(checkmse, fileList, 1))
+
+
+
