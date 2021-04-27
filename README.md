@@ -4,7 +4,7 @@
 
   This program will 'listen' to a folder, files appearing in the folder will be converted to jpg and resized until they are below a specified file size (default 4mb). 
 
-  Useful for resizing superresolution images. 
+  Useful for resizing superresolution images by quality. 
 
   Converted files are moved and archived. 
 
