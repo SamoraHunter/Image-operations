@@ -1,0 +1,145 @@
+import os
+import shutil
+from os import walk
+import cv2
+import numpy as np
+from skimage.measure import compare_ssim
+
+
+# Unused alternative slower image comparison
+def getSSIM(file1, file2):
+    imageA = cv2.imread(file1);
+
+    imageB = cv2.imread(file2);
+
+    grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY);
+    grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY);
+
+    (score, diff) = compare_ssim(grayA, grayB, full=True);
+    diff = (diff * 255).astype("uint8");
+    # print("SSIM: {}".format(score))
+    return score
+
+
+def mse(file1, file2):
+    imageA = cv2.imread(file1);
+
+    imageB = cv2.imread(file2);
+
+    # the 'Mean Squared Error' between the two images is the
+    # sm of the squared difference between the two images;
+    # NOTE: the two images must have the same dimension
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+
+    # return the MSE, the lower the error, the more "similar"
+    # the two images are
+    print(err)
+    return err
+
+
+# Algorithm will compare images in ORDER 1:2 2:3 3:4 4:5...etc useful if images are from video frames and ordered over time. 
+# This is much faster than comparing each image to every other image in the directory but will only work if similar images are adjacent
+# may need to be run multiple times, is fast and uses multi processing. 
+# images must be the same dimension
+# set the threshold for comparison below, the closer to zero the more similar images must be to warrant archiving
+# Intended usage: run the script with a folder of images set, the script will leave only non similar images in the archive
+# Set the number of logical cores you have. I have a 12 core with 24 logical so I set 24.
+
+archive = "...Path to archive of images"
+
+threshold = 10000
+fileList = []
+for (dirpath, dirnames, filenames) in walk(archive):
+    fileList.extend(filenames)
+    break
+
+print(len(fileList))
+
+try:
+    os.stat(archive + '\\' + 'archived')
+except:
+    os.mkdir(archive + '\\' + 'archived')
+
+from multiprocessing import Pool
+
+start = 0
+end = 30
+
+checkMSECount = 0
+
+
+def checkmse(file1):
+    global fileList
+    # global threshold
+    global archive
+    global start
+    global end
+
+    global checkMSECount
+
+    checkMSECount = checkMSECount + 1
+
+    threshold = 10000
+
+    print("in check mse " + str(start))
+    print("in check mse " + str(start))
+
+    fileList = []
+    for (dirpath, dirnames, filenames) in walk(archive):
+        fileList.extend(filenames)
+    # If the images being compared are similar to another in the archive they will be moved to a folder named archived in that same directory.
+    try:
+
+        print("Checking " + archive + '\\' + file1 + " is similar to " + archive + '\\' + fileList[
+            i] + ' ' + 'lenfileList: ' + str(len(fileList)))
+        if (mse(archive + '\\' + file1,
+                archive + '\\' + fileList[i]) < threshold and archive + '\\' + file1 != archive + '\\' + fileList[i]):
+            shutil.move(archive + '\\' + file1, archive + '\\' + 'archived\\' + file1)
+    except Exception as e:
+        print(e)
+
+
+def checkMSEPair(file1, file2):
+    try:
+        # print("Checking " + archive + '\\' + file1 + " is similar to " + archive + '\\' + file2 + ' ' + 'lenfileList: ' +str(len(fileList)))
+        if (mse(archive + '\\' + file1,
+                archive + '\\' + file2) < threshold and archive + '\\' + file1 != archive + '\\' + file2):
+            shutil.move(archive + '\\' + file1, archive + '\\' + 'archived\\' + file1)
+    except Exception as e:
+        print(e)
+
+
+def checkMSEPairFind(file1):
+    global fileList
+
+    file2index = fileList.index(file1) + 1
+
+    file2 = fileList[file2index]
+
+    print("Comparing " + str(file2index - 1) + " " + "to " + str(file2index))
+
+    try:
+        # print("Checking " + archive + '\\' + file1 + " is similar to " + archive + '\\' + file2 + ' ' + 'lenfileList: ' +str(len(fileList)))
+        if (mse(archive + '\\' + file1,
+                archive + '\\' + file2) < threshold and archive + '\\' + file1 != archive + '\\' + file2):
+            shutil.move(archive + '\\' + file1, archive + '\\' + 'archived\\' + file1)
+    except Exception as e:
+        print(e)
+
+
+if __name__ == '__main__':
+
+    #We reread the file directory as files may be moved
+    fileList = []
+    for (dirpath, dirnames, filenames) in walk(archive):
+        fileList.extend(filenames)
+        break
+
+
+    #Set number of logical processes to use :24
+    with Pool(12) as p:
+        fileList = []
+        for (dirpath, dirnames, filenames) in walk(archive):
+            fileList.extend(filenames)
+        print(p.map(checkMSEPairFind, fileList, 1))
